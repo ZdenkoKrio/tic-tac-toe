@@ -7,5 +7,10 @@
 
 import Foundation
 
-print("Hello, World!")
+print("Welcome in Tic-Tac-Toe!")
+
+let tracker = GameTracker()
+let game = TicTacToe(boardSize: 3, winCount: 3)
+game.delegate = tracker
+game.play()
 
