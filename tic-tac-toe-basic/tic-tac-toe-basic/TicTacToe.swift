@@ -10,15 +10,12 @@ import Foundation
 class TicTacToe: Game {
     let boardSize: Int
     let winCount: Int
-    let player1Symbol: Character = "#"
-    let player2Symbol: Character = "*"
-    let emptySymbol: Character = "."
     var winner: Int?
-    var board: [[Character]]
+    var board: [[Symbol]]
     init(boardSize: Int, winCount: Int) {
         self.boardSize = boardSize
         self.winCount = boardSize <= winCount ? boardSize : winCount
-        board = Array(repeating: Array(repeating: emptySymbol, count: boardSize), count: boardSize)
+        board = Array(repeating: Array(repeating: .emptySymbol, count: boardSize), count: boardSize)
     }
     
     weak var delegate: GameDelegate?
@@ -28,16 +25,16 @@ class TicTacToe: Game {
     typealias Coordinations = (col: ColCoor, row: RowCoor)// where Int < boardSize
     
     func play() {
-        board = Array(repeating: Array(repeating: ".", count: boardSize), count: boardSize)
+        board = Array(repeating: Array(repeating: .emptySymbol, count: boardSize), count: boardSize)
         delegate?.gameDidStart(self)
         
         gameLoop: while !isEnd() {
             showGameBoard()
             var player1: Coordinations?
-            while !isValidCoor(player: player1) {
+            while !isValidMove(player: player1) {
                 player1 = playerChoice()!
             }
-            writeSymbol(player: player1, symbol: player1Symbol)
+            writeSymbol(player: player1, symbol: .player1)
             
             guard !isEnd() else {
                 break gameLoop
@@ -45,10 +42,10 @@ class TicTacToe: Game {
             
             showGameBoard()
             var player2: Coordinations?
-            while !isValidCoor(player: player2) {
+            while !isValidMove(player: player2) {
                 player2 = playerChoice()!
             }
-            writeSymbol(player: player2, symbol: player2Symbol)
+            writeSymbol(player: player2, symbol: .player2)
             
             delegate?.gameTurn(self)
             
@@ -81,9 +78,11 @@ class TicTacToe: Game {
         return output
     }
     
-    private func isValidCoor(player: Coordinations?) -> Bool {
-        let coor: Coordinations = player ?? (row: -1, col: -1)
-        
+    private func isValidMove(player: Coordinations?) -> Bool {
+        guard let coor: Coordinations = player else {
+            return false
+        }
+       
         guard 0 ... boardSize - 1 ~= coor.row else {
             print("Your row coor is out of range.")
             return false
@@ -94,7 +93,7 @@ class TicTacToe: Game {
             return false
         }
         
-        guard board[coor.col][coor.row] == emptySymbol else {
+        guard board[coor.col][coor.row] == .emptySymbol else {
             print("Your choice is out of actual posibilities.")
             return false
         }
@@ -105,23 +104,121 @@ class TicTacToe: Game {
             return false
         }
         */
+        
+        /*
+        switch coor {
+        case (0...boardSize-1, 0...boardSize-1):
+            print("coor is correct")
+            return true
+        default:
+            print("coor is out of range")
+            return false
+        }
+         */
     }
     
-    private func writeSymbol(player: Coordinations?, symbol: Character) -> Void {
+    private func isValidCoor(player: Coordinations) -> Bool {
+        guard 0 ... boardSize - 1 ~= player.row else {
+            return false
+        }
+        
+        guard 0 ... boardSize - 1 ~= player.col else {
+            return false
+        }
+        
+        return true
+    }
+    
+    private func writeSymbol(player: Coordinations?, symbol: Symbol) -> Void {
         board[player!.col][player!.row] = symbol
     }
     
     func showGameBoard() {
         for row in board {
-            for col in row {
-                print(col, terminator: " | ")
+            for cell in row {
+                print(cell.rawValue, terminator: " | ")
             }
             print("")
         }
     }
     
     private func isEnd() -> Bool {
-        
+        for col in 0...boardSize-1 {
+            rows: for row in 0...boardSize-1 {
+                guard board[col][row] != .emptySymbol else {
+                    continue rows
+                }
+                
+                guard !(checkLines(point: (col, row)) || checkDiagonals(point: (col, row))) else {
+                    markWinner(symbol: board[col][row])
+                    return true
+                }
+            }
+        }
         return false
+    }
+    
+    private func checkLines(point: Coordinations) -> Bool {
+        return checkVLine(point: point) || checkHLine(point: point)
+    }
+    
+    private func checkHLine(point: Coordinations) -> Bool {
+        for row in point.row...point.row+winCount-1 {
+            guard isValidCoor(player: (point.col, row)) else {
+                return false
+            }
+            
+            guard board[point.col][point.row] == board[point.col][row] else {
+                return false
+            }
+        }
+        return true
+    }
+    
+    private func checkVLine(point: Coordinations) -> Bool {
+        for col in point.col...point.col+winCount-1 {
+            guard isValidCoor(player: (col, point.row)) else {
+                return false
+            }
+            
+            guard board[point.col][point.row] == board[col][point.row] else {
+                return false
+            }
+        }
+        return true
+    }
+    
+    private func checkDiagonals(point: Coordinations) -> Bool {
+        return checkPrimaryDiagonal(point: point) || checkSecondaryDiagonal(point: point)
+    }
+    
+    private func checkPrimaryDiagonal(point: Coordinations) -> Bool {
+        for shift in 0...winCount {
+            guard isValidCoor(player: (point.col + shift, point.row + shift)) else {
+                return false
+            }
+            
+            guard board[point.col][point.row] == board[point.col + shift][point.row + shift] else {
+                return false
+            }
+        }
+        return true
+    }
+    
+    private func checkSecondaryDiagonal(point: Coordinations) -> Bool {
+        for shift in 0...winCount {
+            guard isValidCoor(player: (point.col - shift, point.row + shift)) else {
+                return false
+            }
+            
+            guard board[point.col][point.row] == board[point.col - shift][point.row + shift] else {
+                return false
+            }
+        }
+        return true
+    }
+    
+    private func markWinner(symbol: Symbol) -> Void {
+        winner = symbol == .player1 ? 1 : 2
     }
 }
